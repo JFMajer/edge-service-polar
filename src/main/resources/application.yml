@@ -8,14 +8,20 @@ server:
 spring:
   application:
     name: edge-service
+  session:
+    store-type: redis
+    timeout: 5m
+    redis:
+      namespace: polar-edge
   redis:
-    host: localhost
+    host: ${REDIS_URI:localhost}
     port: 6379
     connection-timeout: 2s
     timeout: 1s
   cloud:
     gateway:
       default-filters:
+        - SaveSession
         - name: RequestRateLimiter
           args:
             redis-rate-limiter:
