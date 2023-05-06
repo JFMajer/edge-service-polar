@@ -3,32 +3,38 @@ server:
   netty:
     connection-timeout: 2s
     idle-timeout: 15s
-  shutdown: graceful
+    shutdown: graceful
 
 spring:
   application:
     name: edge-service
-  lifecycle:
-    timeout-per-shutdown-phase: 15s
-    cloud:
-      gateway:
-        httpclient:
-          connect-timeout: 2s
-          response-timeout: 5s
-          pool:
-            type: elastic
-            max-idle-time: 15s
-            max-life-time: 60s
-        routes:
-          - id: catalog-route
-            uri: ${CATALOG_SERVICE_URL:http://localhost:8080}/books
-            predicates:
-              - Path=/books/**
-          - id: order-route
-            uri: ${ORDER_SERVICE_URL:http://localhost:8090}/orders
-            predicates:
-              - Path=/orders/**
-logging:
-  level:
-    root: DEBUG
-
+  cloud:
+    gateway:
+      default-filters:
+        - name: Retry
+          args:
+            retries: 3
+            methods: GET
+            series: SERVER_ERROR
+            exceptions: java.io.IOException, java.util.concurrent.TimeoutException
+            backoff:
+              first-backoff: 50ms
+              max-backoff: 500ms
+              factor: 2
+              based-on-previous-value: false
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 5s
+        pool:
+          type: elastic
+          max-idle-time: 15s
+          max-life-time: 60s
+      routes:
+        - id: catalog-route
+          uri: ${CATALOG_SERVICE_URI:http://localhost:8080}/books
+          predicates:
+            - Path=/books/**
+        - id: order-route
+          uri: ${ORDER_SERVICE_URI:http://localhost:8090}/orders
+          predicates:
+            - Path=/orders/**
